@@ -1,13 +1,13 @@
 //
-//	AX-Mini Library
-//	Release 1.0.0
+//	Hanuman Library
+//	Release 1.1.0
 //	Date -
 //
 //	Update: -
 //
 
-#ifndef __AXMINI_H__
-#define __AXMINI_H__
+#ifndef __HANUMAN_H__
+#define __HANUMAN_H__
 
 #include "Arduino.h"
 
@@ -44,7 +44,7 @@ Motor_Pin_t motor_pins[4] = {
 
 Servo myServo[sizeof(servo_pins)];
 
-volatile int __analogResolution = 12;
+volatile int __analogResolution = 10;
 
 
 //-------------------------------------------------------------
@@ -177,12 +177,15 @@ int __knobLastValue = 0;
 #define KNOB(x) knob(x)
 
 int SW_OK(void) {
-  init_analog_A3();
-
+  // init_analog_A3();
+  
+  pinMode(A3, INPUT_PULLUP);
+  int value = analogRead(A3);
+  // Serial.println(value);
   if (__analogResolution == 12) {
-    return analogRead(A3) < 16;
+    return analogRead(A3) < 20;
   } else {
-    return analogRead(A3) < 4;
+    return analogRead(A3) <= 4;
   }
 
   return 0;
@@ -203,7 +206,7 @@ int knob(void) {
 
   int __knobValue;
   __knobValue = analogRead(A3);
-
+/*
   if (__analogResolution == 12) {
     if (__knobValue >= 16) {
       if (__knobValue < 95)
@@ -216,9 +219,18 @@ int knob(void) {
         __knobValue = 23;
       __knobLastValue = __knobValue - 23;
     }
-  }
+  }*/
 
-  return (__knobLastValue);
+  // return (__knobLastValue);
+  int max_value = __analogResolution == 12 ? 4095 : 1023;
+  __knobValue = map(__knobValue, 10, 1000, 0, max_value);
+  if (__knobValue < 0) {
+    __knobValue = 0;
+  }
+  if (__knobValue > max_value) {
+    __knobValue = max_value;
+  }
+  return __knobValue;
 }
 
 int knob(int scale) {
@@ -346,8 +358,8 @@ void motor(char ch, int pow) {
     _motor(1, pow);
     _motor(2, -pow);
   } else if (ch == 121) {
-    _motor(3, -pow);
-    _motor(4, pow);
+    _motor(1, -pow);
+    _motor(2, pow);
   }
 }
 
