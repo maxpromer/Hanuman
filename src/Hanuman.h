@@ -11,6 +11,12 @@
 
 #include "Arduino.h"
 
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <OLED_I2C_SSD1309.h>
+OLED_I2C_SSD1309 oled(-1);
+
+
 #define sleep(x) delay(x)
 #define delay_us(x) delayMicroseconds(x)
 
@@ -46,14 +52,57 @@ Servo myServo[sizeof(servo_pins)];
 
 volatile int __analogResolution = 10;
 
+enum {
+  _A0 = 100,
+  _A1,
+  _A2,
+  _A3,
+  _A4,
+  _A5,
+  _A6,
+  _A7,
+  _A8,
+  _A9
+};
+
+#define ANALOG_MUX_S0_PIN (12)
+#define ANALOG_MUX_S1_PIN (11)
+#define ANALOG_MUX_S2_PIN (10)
+
+void init_mux() {
+  static bool init_mux_flag = false;
+  if (!init_mux_flag) {
+    pinMode(ANALOG_MUX_S0_PIN, OUTPUT);
+    pinMode(ANALOG_MUX_S1_PIN, OUTPUT);
+    pinMode(ANALOG_MUX_S2_PIN, OUTPUT);
+  }
+}
+
+void set_mux(uint8_t ch) {
+  init_mux();
+
+  digitalWrite(ANALOG_MUX_S0_PIN, bitRead(ch, 0) ? HIGH : LOW);
+  digitalWrite(ANALOG_MUX_S1_PIN, bitRead(ch, 1) ? HIGH : LOW);
+  digitalWrite(ANALOG_MUX_S2_PIN, bitRead(ch, 2) ? HIGH : LOW);
+}
 
 //-------------------------------------------------------------
 // Digital in,out
 //-------------------------------------------------------------
 int in(int p) {
-  pinMode(p, INPUT_PULLUP);
-  return digitalRead(p);
+  if (p < _A0) {
+    pinMode(p, INPUT_PULLUP);
+    return digitalRead(p);
+  } else if (p >= _A0 && p <= _A7) {
+    pinMode(A0, INPUT_PULLUP);
+    set_mux(p - _A0);
+    return digitalRead(A0);
+  } else {
+    pinMode(p - _A8 + A1, INPUT_PULLUP);
+    return digitalRead(p - _A8 + A1);
+  }
 }
+
 void out(int p, int dat) {
   pinMode(p, OUTPUT);
   digitalWrite(p, dat);
@@ -66,10 +115,6 @@ void out(int p, int dat) {
 //-------------------------------------------------------------
 // Analog
 //-------------------------------------------------------------
-#define ANALOG_MUX_S0_PIN (12)
-#define ANALOG_MUX_S1_PIN (11)
-#define ANALOG_MUX_S2_PIN (10)
-
 int analog(int pinAN);
 
 int analog(void)  // return 10 or 12 as resolution mode
@@ -103,19 +148,14 @@ int analog(int pinAN) {
   //  analogReadResolution(__analogResolution);
   static bool init_analog_pin = false;
   if (!init_analog_pin) {
-    pinMode(ANALOG_MUX_S0_PIN, OUTPUT);
-    pinMode(ANALOG_MUX_S1_PIN, OUTPUT);
-    pinMode(ANALOG_MUX_S2_PIN, OUTPUT);
-
     pinMode(A1, INPUT);
     pinMode(A2, INPUT);
   }
 
   if ((pinAN >= 0) && (pinAN <= 7)) {
-    digitalWrite(ANALOG_MUX_S0_PIN, bitRead(pinAN, 0) ? HIGH : LOW);
-    digitalWrite(ANALOG_MUX_S1_PIN, bitRead(pinAN, 1) ? HIGH : LOW);
-    digitalWrite(ANALOG_MUX_S2_PIN, bitRead(pinAN, 2) ? HIGH : LOW);
+    set_mux(pinAN);
 
+    pinMode(A0, INPUT);
     return analogRead(A0);
   } else if ((pinAN >= 8) && (pinAN <= 10)) {
     return analogRead((pinAN - 8) + A1);
