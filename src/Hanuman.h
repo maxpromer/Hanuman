@@ -94,8 +94,9 @@ int in(int p) {
     pinMode(p, INPUT_PULLUP);
     return digitalRead(p);
   } else if (p >= _A0 && p <= _A7) {
-    pinMode(A0, INPUT_PULLUP);
+    pinMode(A0, INPUT);
     set_mux(p - _A0);
+    delayMicroseconds(50); // wait switch done
     return digitalRead(A0);
   } else {
     pinMode(p - _A8 + A1, INPUT_PULLUP);
@@ -148,6 +149,7 @@ int analog(int pinAN) {
   //  analogReadResolution(__analogResolution);
   static bool init_analog_pin = false;
   if (!init_analog_pin) {
+    pinMode(A0, INPUT);
     pinMode(A1, INPUT);
     pinMode(A2, INPUT);
   }
@@ -155,7 +157,6 @@ int analog(int pinAN) {
   if ((pinAN >= 0) && (pinAN <= 7)) {
     set_mux(pinAN);
 
-    pinMode(A0, INPUT);
     return analogRead(A0);
   } else if ((pinAN >= 8) && (pinAN <= 10)) {
     return analogRead((pinAN - 8) + A1);
