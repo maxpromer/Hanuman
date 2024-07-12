@@ -65,39 +65,22 @@ enum {
   _A9
 };
 
-#define ANALOG_MUX_S0_PIN (12)
-#define ANALOG_MUX_S1_PIN (11)
-#define ANALOG_MUX_S2_PIN (10)
-
-void init_mux() {
-  static bool init_mux_flag = false;
-  if (!init_mux_flag) {
-    pinMode(ANALOG_MUX_S0_PIN, OUTPUT);
-    pinMode(ANALOG_MUX_S1_PIN, OUTPUT);
-    pinMode(ANALOG_MUX_S2_PIN, OUTPUT);
-  }
-}
-
-void set_mux(uint8_t ch) {
-  init_mux();
-
-  digitalWrite(ANALOG_MUX_S0_PIN, bitRead(ch, 0) ? HIGH : LOW);
-  digitalWrite(ANALOG_MUX_S1_PIN, bitRead(ch, 1) ? HIGH : LOW);
-  digitalWrite(ANALOG_MUX_S2_PIN, bitRead(ch, 2) ? HIGH : LOW);
-}
-
 //-------------------------------------------------------------
 // Digital in,out
 //-------------------------------------------------------------
+#define LOGIC_HIGH_THRESHOLD (200)
+int analog(int pinAN);
+
 int in(int p) {
   if (p < _A0) {
     pinMode(p, INPUT_PULLUP);
     return digitalRead(p);
   } else if (p >= _A0 && p <= _A7) {
-    pinMode(A0, INPUT);
-    set_mux(p - _A0);
-    delayMicroseconds(50); // wait switch done
-    return digitalRead(A0);
+    uint8_t analog_pin = p - _A0;
+    int a = analog(analog_pin);
+    int logic = a > LOGIC_HIGH_THRESHOLD;
+    // Serial.printf("[A%d] Analog: %4d, logic: %d\t", analog_pin, a, logic);
+    return logic;
   } else {
     pinMode(p - _A8 + A1, INPUT_PULLUP);
     return digitalRead(p - _A8 + A1);
@@ -116,7 +99,9 @@ void out(int p, int dat) {
 //-------------------------------------------------------------
 // Analog
 //-------------------------------------------------------------
-int analog(int pinAN);
+#define ANALOG_MUX_S0_PIN (12)
+#define ANALOG_MUX_S1_PIN (11)
+#define ANALOG_MUX_S2_PIN (10)
 
 int analog(void)  // return 10 or 12 as resolution mode
 {
@@ -149,13 +134,18 @@ int analog(int pinAN) {
   //  analogReadResolution(__analogResolution);
   static bool init_analog_pin = false;
   if (!init_analog_pin) {
-    pinMode(A0, INPUT);
+    pinMode(ANALOG_MUX_S0_PIN, OUTPUT);
+    pinMode(ANALOG_MUX_S1_PIN, OUTPUT);
+    pinMode(ANALOG_MUX_S2_PIN, OUTPUT);
+
     pinMode(A1, INPUT);
     pinMode(A2, INPUT);
   }
 
   if ((pinAN >= 0) && (pinAN <= 7)) {
-    set_mux(pinAN);
+    digitalWrite(ANALOG_MUX_S0_PIN, bitRead(pinAN, 0) ? HIGH : LOW);
+    digitalWrite(ANALOG_MUX_S1_PIN, bitRead(pinAN, 1) ? HIGH : LOW);
+    digitalWrite(ANALOG_MUX_S2_PIN, bitRead(pinAN, 2) ? HIGH : LOW);
 
     return analogRead(A0);
   } else if ((pinAN >= 8) && (pinAN <= 10)) {
