@@ -216,7 +216,7 @@ int SW_OK(void) {
   if (__analogResolution == 12) {
     return analogRead(A3) < 20;
   } else {
-    return analogRead(A3) <= 4;
+    return analogRead(A3) <= 8;
   }
 
   return 0;
