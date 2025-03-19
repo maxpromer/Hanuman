@@ -20,14 +20,34 @@ OLED_I2C_SSD1309 oled(-1);
 #define sleep(x) delay(x)
 #define delay_us(x) delayMicroseconds(x)
 
+#ifdef ARDUINO_ARCH_ESP32
+#include <ESP32Servo.h>
+#else
 #include <Servo.h>
+#endif
 
+#ifdef ARDUINO_ARCH_ESP32
+#define SV1pin 48
+#define SV2pin 13
+#define SV3pin 14
+#else
 #define SV1pin 13
 #define SV2pin 18
 #define SV3pin 19
+#endif
 
 int servo_pins[] = { SV1pin, SV2pin, SV3pin };
 
+#ifdef ARDUINO_ARCH_ESP32
+#define M1A 44
+#define M1B 43
+#define M2A 6
+#define M2B 5
+#define M3A 8
+#define M3B 7
+#define M4A 10
+#define M4B 9
+#else
 #define M1A 1
 #define M1B 0
 #define M2A 3
@@ -36,6 +56,13 @@ int servo_pins[] = { SV1pin, SV2pin, SV3pin };
 #define M3B 4
 #define M4A 7
 #define M4B 6
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+const int knob_sw_ok_pin = 4;
+#else
+const int knob_sw_ok_pin = A3;
+#endif
 
 typedef struct {
   int a;
@@ -99,9 +126,15 @@ void out(int p, int dat) {
 //-------------------------------------------------------------
 // Analog
 //-------------------------------------------------------------
+#ifdef ARDUINO_ARCH_ESP32
+#define ANALOG_MUX_S0_PIN (47)
+#define ANALOG_MUX_S1_PIN (38)
+#define ANALOG_MUX_S2_PIN (21)
+#else
 #define ANALOG_MUX_S0_PIN (12)
 #define ANALOG_MUX_S1_PIN (11)
 #define ANALOG_MUX_S2_PIN (10)
+#endif
 
 int analog(void)  // return 10 or 12 as resolution mode
 {
@@ -195,7 +228,7 @@ int analog(int pinAN, int scaleMin, int scaleMax) {
 void init_analog_A3() {
   static bool init = false;
   if (!init) {
-    pinMode(A3, INPUT);
+    pinMode(knob_sw_ok_pin, INPUT);
   }
 }
 
@@ -210,13 +243,13 @@ int __knobLastValue = 0;
 int SW_OK(void) {
   // init_analog_A3();
   
-  pinMode(A3, INPUT_PULLUP);
-  int value = analogRead(A3);
+  pinMode(knob_sw_ok_pin, INPUT_PULLUP);
+  int value = analogRead(knob_sw_ok_pin);
   // Serial.println(value);
   if (__analogResolution == 12) {
-    return analogRead(A3) < 20;
+    return analogRead(knob_sw_ok_pin) < 20;
   } else {
-    return analogRead(A3) <= 8;
+    return analogRead(knob_sw_ok_pin) <= 8;
   }
 
   return 0;
@@ -236,7 +269,7 @@ int knob(void) {
   init_analog_A3();
 
   int __knobValue;
-  __knobValue = analogRead(A3);
+  __knobValue = analogRead(knob_sw_ok_pin);
 /*
   if (__analogResolution == 12) {
     if (__knobValue >= 16) {
@@ -254,7 +287,11 @@ int knob(void) {
 
   // return (__knobLastValue);
   int max_value = __analogResolution == 12 ? 4095 : 1023;
+#ifdef ARDUINO_ARCH_ESP32
+  __knobValue = map(__knobValue, 0, 4095, 0, max_value);
+#else
   __knobValue = map(__knobValue, 10, 1000, 0, max_value);
+#endif
   if (__knobValue < 0) {
     __knobValue = 0;
   }
