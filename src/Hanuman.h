@@ -75,6 +75,9 @@ Motor_Pin_t motor_pins[4] = {
   { M4A, M4B },
 };
 
+#define SERVO_MIN_US (500)
+#define SERVO_MAX_US (2500)
+
 Servo myServo[sizeof(servo_pins)];
 
 volatile int __analogResolution = 10;
@@ -172,7 +175,6 @@ int analog(int pinAN) {
     pinMode(ANALOG_MUX_S2_PIN, OUTPUT);
 
     pinMode(A1, INPUT);
-    pinMode(A2, INPUT);
   }
 
   if ((pinAN >= 0) && (pinAN <= 7)) {
@@ -241,18 +243,11 @@ int __knobLastValue = 0;
 #define KNOB(x) knob(x)
 
 int SW_OK(void) {
-  // init_analog_A3();
-  
-  pinMode(knob_sw_ok_pin, INPUT_PULLUP);
-  int value = analogRead(knob_sw_ok_pin);
-  // Serial.println(value);
-  if (__analogResolution == 12) {
-    return analogRead(knob_sw_ok_pin) < 20;
-  } else {
-    return analogRead(knob_sw_ok_pin) <= 8;
+  static bool init = false;
+  if (!init) {
+    pinMode(A2, INPUT_PULLUP);
   }
-
-  return 0;
+  return digitalRead(A2) == LOW;
 }
 
 void waitSW_OK(void) {
@@ -556,7 +551,7 @@ void servo(char n, signed int angle) {
     myServo[n].detach();
   } else {
     if (!myServo[n].attached()) {
-      myServo[n].attach(servo_pins[n]);
+      myServo[n].attach(servo_pins[n], SERVO_MIN_US, SERVO_MAX_US);
     }
     myServo[n].write(angle);
   }
